@@ -21,3 +21,20 @@ const (
 
 // ID represents an ID value.
 type ID uint64
+
+var defaultGenerator, _ = NewGenerator(DefaultEpoch, 0)
+
+// Next returns a next ID.
+func Next() ID {
+	return defaultGenerator.Next()
+}
+
+// LastID returns a last generated ID.
+func LastID() ID {
+	return ID(defaultGenerator.lastID)
+}
+
+// LastTimestamp returns a last generated timestamp.
+func LastTimestamp() int64 {
+	return int64(defaultGenerator.lastTimestamp)
+}
