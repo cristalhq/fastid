@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Generator ...
+// Generator represents IDs with a given epoch and workedID.
 type Generator struct {
 	mutex sync.RWMutex
 
