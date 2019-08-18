@@ -22,6 +22,26 @@ const (
 // ID represents an ID value.
 type ID uint64
 
+// Parts returns ID's parts(timestamp, sequence number, worker id).
+func (id ID) Parts() (int64, int, int) {
+	return id.Timestamp(), id.Sequence(), id.WorkerID()
+}
+
+// Timestamp returns ID's timestamp (unix ms).
+func (id ID) Timestamp() int64 {
+	return int64(id) >> timestampShift
+}
+
+// Sequence returns ID's sequence number.
+func (id ID) Sequence() int {
+	return int(id) & sequenceMask
+}
+
+// WorkerID returns ID's worker id.
+func (id ID) WorkerID() int {
+	return int(id) >> workerIDShift
+}
+
 var defaultGenerator, _ = NewGenerator(DefaultEpoch, 0)
 
 // Next returns a next ID.
