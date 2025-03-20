@@ -2,6 +2,7 @@ package fastid
 
 import (
 	"errors"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -26,6 +27,16 @@ const (
 
 // ID represents an ID value.
 type ID uint64
+
+// Parse given string as [ID].
+func Parse(s string) (ID, error) {
+	n, err := strconv.ParseUint(s, 10, 64)
+	return ID(n), err
+}
+
+func (id ID) String() string {
+	return strconv.FormatUint(uint64(id), 10)
+}
 
 // Parts returns ID's parts: timestamp, worker id, sequence number.
 func (id ID) Parts() (int64, int, int) {
