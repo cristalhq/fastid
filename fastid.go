@@ -9,7 +9,7 @@ import (
 
 const (
 	// DefaultEpoch is an epoch for a default generator.
-	DefaultEpoch = 1_500_000_000_000
+	DefaultEpoch = 1_700_000_000_000
 
 	// workerIDBits is how many bits are used for worked ID.
 	workerIDBits = uint(10)
@@ -38,11 +38,6 @@ func (id ID) String() string {
 	return strconv.FormatUint(uint64(id), 10)
 }
 
-// Parts returns ID's parts: timestamp, worker id, sequence number.
-func (id ID) Parts() (int64, int, int) {
-	return id.Timestamp(), id.WorkerID(), id.Sequence()
-}
-
 // Timestamp of the ID (from generator epoch).
 func (id ID) Timestamp() int64 {
 	return int64(id) >> timestampShift
@@ -50,7 +45,7 @@ func (id ID) Timestamp() int64 {
 
 // WorkerID returns ID's worker id.
 func (id ID) WorkerID() int {
-	return int(id) >> workerIDShift
+	return (int(id) >> workerIDShift) & MaxWorkerID
 }
 
 // Sequence returns ID's sequence number.
@@ -63,11 +58,10 @@ type Generator struct {
 	epoch    uint64
 	workerID uint64
 
-	mu            sync.Mutex
-	timestamp     uint64
-	sequence      uint64
-	lastTimestamp uint64
-	lastID        uint64
+	mu       sync.Mutex
+	sequence uint64
+	lastTS   uint64
+	lastID   uint64
 }
 
 // NewGenerator creates a new generator for IDs with a given epoch and workerID.
@@ -87,26 +81,28 @@ func NewGenerator(epoch int64, workerID int) (*Generator, error) {
 func (g *Generator) Next() ID {
 	g.mu.Lock()
 
-	g.timestamp = uint64(time.Now().UnixMilli())
+	now := uint64(time.Now().UnixMilli())
 
-	if g.timestamp <= g.lastTimestamp {
-		g.sequence = (g.sequence + 1) & MaxSequenceID
-
-		if g.sequence == 0 {
-			g.timestamp = g.lastTimestamp + 1
-		}
-	} else {
+	switch {
+	case now > g.lastTS:
 		g.sequence = 0
+	case now == g.lastTS:
+		if (g.sequence + 1) <= MaxSequenceID {
+			g.sequence++
+		} else {
+			g.sequence = 0
+			now++
+		}
 	}
+	g.lastTS = now
 
-	ts := (g.timestamp - g.epoch) << timestampShift
+	ts := (now - g.epoch) << timestampShift
 	id := g.workerID << workerIDShift
 	seq := g.sequence
 
 	nextID := ts | id | seq
 
 	g.lastID = nextID
-	g.lastTimestamp = g.timestamp
 
 	g.mu.Unlock()
 	return ID(nextID)
@@ -120,12 +116,12 @@ func (g *Generator) LastID() ID {
 	return ID(g.lastID)
 }
 
-// LastTimestamp returns a last generated timestamp.
-func (g *Generator) LastTimestamp() uint64 {
+// LastTS returns a last generated timestamp.
+func (g *Generator) LastTS() uint64 {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	return g.lastTimestamp
+	return g.lastTS
 }
 
 // LastSequence returns a last generated sequence.
